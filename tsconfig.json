@@ -1,0 +1,27 @@
+{
+  "ts-node": {
+    "transpileOnly": true
+  },
+  "compilerOptions": {
+    "outDir": "build",
+    "baseUrl": "./src",
+    "typeRoots": ["./node_modules/@types"],
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "paths": {
+      "@cdk/*": ["cdk/*"]
+    },
+    "declaration": false,
+    "lib": ["ES2022"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["build", "node_modules", "cdk.out"]
+}

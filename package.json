@@ -1,0 +1,36 @@
+{
+  "name": "@michaelnusair/web3-to-telegram",
+  "version": "1.0.1",
+  "scripts": {
+    "build": "rm -rf build && tsc",
+    "cdk:list": "cdk list",
+    "deploy:prod": "cdk deploy web3-to-telegram --require-approval never",
+    "watch": "tsc -w",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "cdk:dry-run": "rm -rf build/bundles && cdk synth"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@nx/eslint-plugin": "^20.0.0",
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^24.1.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "aws-cdk": "2.147.3",
+    "axios": "^1.7.2",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "globals": "^15.11.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.147.3",
+    "constructs": "^10.0.0",
+    "eslint": "^9.32.0",
+    "ethers": "^6.15.0"
+  }
+}
