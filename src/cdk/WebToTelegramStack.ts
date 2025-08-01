@@ -24,7 +24,21 @@ export class WebToTelegramStack extends Stack {
       functionName: "WebToTelegramLambda",
       handler: "index.handler",
       runtime: Runtime.NODEJS_20_X,
-      code: Code.fromAsset("build/lambdas"),
+      code: Code.fromAsset("src/lambdas", {
+        bundling: {
+          image: Runtime.NODEJS_20_X.bundlingImage,
+          command: [
+            "bash",
+            "-c",
+            [
+              "npm install",
+              "cp -r /asset-input/* /asset-output/",
+              "cd /asset-output",
+              "npm install --omit=dev",
+            ].join(" && "),
+          ],
+        },
+      }),
       timeout: Duration.seconds(30),
       memorySize: 128,
       environment: {

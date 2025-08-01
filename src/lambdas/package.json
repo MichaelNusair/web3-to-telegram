@@ -1,0 +1,9 @@
+{
+  "name": "web3-to-telegram-lambda",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "ethers": "^6.15.0",
+    "axios": "^1.7.2"
+  }
+}
