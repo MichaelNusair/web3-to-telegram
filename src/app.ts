@@ -12,8 +12,7 @@ const getRequiredEnv = (name: string): string => {
   return value;
 };
 
-new WebToTelegramStack(app, {
-  stackName: "web3-to-telegram",
+new WebToTelegramStack(app, "web3-to-telegram", {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION || "us-east-1",

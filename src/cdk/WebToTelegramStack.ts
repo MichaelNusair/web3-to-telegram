@@ -17,8 +17,8 @@ interface WebToTelegramStackProps extends StackProps {
 }
 
 export class WebToTelegramStack extends Stack {
-  constructor(scope: Construct, props: WebToTelegramStackProps) {
-    super(scope, "WebToTelegramStack", props);
+  constructor(scope: Construct, id: string, props: WebToTelegramStackProps) {
+    super(scope, id, props);
 
     const webToTelegramLambda = new Function(this, "WebToTelegramLambda", {
       functionName: "WebToTelegramLambda",
