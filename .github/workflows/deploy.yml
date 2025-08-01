@@ -1,0 +1,53 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy to AWS
+        run: pnpm run deploy:prod
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          DATA_PROVIDER_ADDRESS: ${{ secrets.DATA_PROVIDER_ADDRESS }}
+          ALERT_BOT_TOKEN: ${{ secrets.ALERT_BOT_TOKEN }}
+          ALERT_BOT_CHAT_ID: ${{ secrets.ALERT_BOT_CHAT_ID }}
+          NO_ALERT_BOT_TOKEN: ${{ secrets.NO_ALERT_BOT_TOKEN }}
+          NO_ALERT_BOT_CHAT_ID: ${{ secrets.NO_ALERT_BOT_CHAT_ID }}
+          WATCH_LIST: ${{ secrets.WATCH_LIST }}
+          ALERT_THRESHOLD_TOKENS: ${{ secrets.ALERT_THRESHOLD_TOKENS }}

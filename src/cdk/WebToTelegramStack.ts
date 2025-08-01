@@ -5,8 +5,19 @@ import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import { Stack, StackProps } from "aws-cdk-lib";
 import { Duration } from "aws-cdk-lib";
 
+interface WebToTelegramStackProps extends StackProps {
+  rpcUrl: string;
+  dataProviderAddress: string;
+  alertBotToken: string;
+  alertBotChatId: string;
+  noAlertBotToken: string;
+  noAlertBotChatId: string;
+  watchList: string; // JSON string
+  alertThresholdTokens: string;
+}
+
 export class WebToTelegramStack extends Stack {
-  constructor(scope: Construct, props: StackProps) {
+  constructor(scope: Construct, props: WebToTelegramStackProps) {
     super(scope, "WebToTelegramStack", props);
 
     const commonLayer = this.createCommonLambdaLayer();
@@ -19,6 +30,16 @@ export class WebToTelegramStack extends Stack {
       layers: [commonLayer],
       timeout: Duration.seconds(30),
       memorySize: 128,
+      environment: {
+        RPC_URL: props.rpcUrl,
+        DATA_PROVIDER_ADDRESS: props.dataProviderAddress,
+        ALERT_BOT_TOKEN: props.alertBotToken,
+        ALERT_BOT_CHAT_ID: props.alertBotChatId,
+        NO_ALERT_BOT_TOKEN: props.noAlertBotToken,
+        NO_ALERT_BOT_CHAT_ID: props.noAlertBotChatId,
+        WATCH_LIST: props.watchList,
+        ALERT_THRESHOLD_TOKENS: props.alertThresholdTokens,
+      },
     });
 
     // EventBridge rule to trigger Lambda every minute
