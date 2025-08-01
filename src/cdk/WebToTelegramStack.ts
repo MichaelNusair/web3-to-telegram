@@ -24,7 +24,7 @@ export class WebToTelegramStack extends Stack {
       functionName: "WebToTelegramLambda",
       handler: "index.handler",
       runtime: Runtime.NODEJS_20_X,
-      code: Code.fromAsset("src/lambdas", {
+      code: Code.fromAsset("build/lambdas", {
         bundling: {
           image: Runtime.NODEJS_20_X.bundlingImage,
           command: [
@@ -33,10 +33,9 @@ export class WebToTelegramStack extends Stack {
             [
               "export npm_config_cache=/tmp/.npm",
               "export npm_config_update_notifier=false",
-              "npm install --no-audit --no-fund",
               "cp -r /asset-input/* /asset-output/",
               "cd /asset-output",
-              "npm install --omit=dev --no-audit --no-fund",
+              "npm install ethers axios --omit=dev --no-audit --no-fund",
             ].join(" && "),
           ],
         },
