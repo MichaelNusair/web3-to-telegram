@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import { Stack, StackProps } from "aws-cdk-lib";
@@ -20,14 +20,11 @@ export class WebToTelegramStack extends Stack {
   constructor(scope: Construct, props: WebToTelegramStackProps) {
     super(scope, "WebToTelegramStack", props);
 
-    const commonLayer = this.createCommonLambdaLayer();
-
     const webToTelegramLambda = new Function(this, "WebToTelegramLambda", {
       functionName: "WebToTelegramLambda",
       handler: "index.handler",
       runtime: Runtime.NODEJS_20_X,
       code: Code.fromAsset("build/lambdas"),
-      layers: [commonLayer],
       timeout: Duration.seconds(30),
       memorySize: 128,
       environment: {
@@ -52,13 +49,4 @@ export class WebToTelegramStack extends Stack {
     // Add Lambda as target for the EventBridge rule
     scheduleRule.addTarget(new LambdaFunction(webToTelegramLambda));
   }
-
-  createCommonLambdaLayer = () => {
-    const name = `CommonLambdaLayer`;
-    return new LayerVersion(this, name, {
-      description: "Common Lambda layer",
-      layerVersionName: name,
-      code: Code.fromAsset("build/layers/common-layer/layer.zip"),
-    });
-  };
 }
