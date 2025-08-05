@@ -133,8 +133,8 @@ export const handler = async () => {
             capWei
           )} free)\n` +
           (alert
-            ? "⚠️ *Alert* – ≥ 1 M tokens available!"
-            : "✅ No alert – less than 1 M available.");
+            ? "⚠️ *Alert* – ≥ "+pretty(ALERT_THRESHOLD)+" tokens available!"
+            : "✅ No alert – less than "+pretty(ALERT_THRESHOLD)+" available.");
 
         await sendTelegram(bot.token, bot.chat_id, msg);
 
