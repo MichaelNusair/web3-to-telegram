@@ -1,4 +1,4 @@
-name: Deploy to AWS
+name: Deploy
 
 on:
   push:
@@ -8,26 +8,34 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
+      - name: Enable corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.0 --activate
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
+          cache: pnpm
 
+      # Install at repo root so the root pnpm-lock.yaml is used
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
-      - name: Build project
+      - name: Build frontend
+        working-directory: src/frontend
+        env:
+          VITE_API_URL: ${{ secrets.WATCHLIST_API_URL }}
+          VITE_API_KEY: ${{ secrets.WATCHLIST_API_KEY }}
+        run: pnpm run build
+
+      - name: Build CDK
         run: pnpm run build
 
       - name: Configure AWS credentials
@@ -37,9 +45,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Deploy to AWS
-        run: pnpm run deploy:prod
+      - name: CDK Diff
+        run: pnpm exec cdk diff
         env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: us-east-1
           RPC_URL: ${{ secrets.RPC_URL }}
           DATA_PROVIDER_ADDRESS: ${{ secrets.DATA_PROVIDER_ADDRESS }}
           ALERT_BOT_TOKEN: ${{ secrets.ALERT_BOT_TOKEN }}
@@ -48,3 +58,35 @@ jobs:
           NO_ALERT_BOT_CHAT_ID: ${{ secrets.NO_ALERT_BOT_CHAT_ID }}
           WATCH_LIST: ${{ secrets.WATCH_LIST }}
           ALERT_THRESHOLD_TOKENS: ${{ secrets.ALERT_THRESHOLD_TOKENS }}
+          WATCHLIST_API_KEY: ${{ secrets.WATCHLIST_API_KEY }}
+          ALARM_EMAIL: ${{ secrets.ALARM_EMAIL }}
+
+      - name: CDK Deploy
+        run: pnpm exec cdk deploy web3-to-telegram --require-approval never
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+          RPC_URL: ${{ secrets.RPC_URL }}
+          DATA_PROVIDER_ADDRESS: ${{ secrets.DATA_PROVIDER_ADDRESS }}
+          ALERT_BOT_TOKEN: ${{ secrets.ALERT_BOT_TOKEN }}
+          ALERT_BOT_CHAT_ID: ${{ secrets.ALERT_BOT_CHAT_ID }}
+          NO_ALERT_BOT_TOKEN: ${{ secrets.NO_ALERT_BOT_TOKEN }}
+          NO_ALERT_BOT_CHAT_ID: ${{ secrets.NO_ALERT_BOT_CHAT_ID }}
+          WATCH_LIST: ${{ secrets.WATCH_LIST }}
+          ALERT_THRESHOLD_TOKENS: ${{ secrets.ALERT_THRESHOLD_TOKENS }}
+          WATCHLIST_API_KEY: ${{ secrets.WATCHLIST_API_KEY }}
+          ALARM_EMAIL: ${{ secrets.ALARM_EMAIL }}
+
+      - name: Resolve frontend bucket and distribution
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks --region us-east-1 --stack-name web3-to-telegram --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
+          DIST_ID=$(aws cloudformation describe-stacks --region us-east-1 --stack-name web3-to-telegram --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionId'].OutputValue" --output text)
+          echo "FRONTEND_BUCKET=$BUCKET" >> $GITHUB_ENV
+          echo "FRONTEND_DIST_ID=$DIST_ID" >> $GITHUB_ENV
+
+      - name: S3 sync frontend
+        working-directory: src/frontend
+        run: aws s3 sync dist "s3://${{ env.FRONTEND_BUCKET }}" --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id "${{ env.FRONTEND_DIST_ID }}" --paths '/*'

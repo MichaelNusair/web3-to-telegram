@@ -23,5 +23,5 @@
     "lib": ["ES2022"]
   },
   "include": ["src/**/*"],
-  "exclude": ["build", "node_modules", "cdk.out"]
+  "exclude": ["build", "node_modules", "cdk.out", "src/frontend/**"]
 }

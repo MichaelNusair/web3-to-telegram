@@ -1,28 +1,27 @@
-#!/usr/bin/env node
-import * as cdk from "aws-cdk-lib";
-import { WebToTelegramStack } from "@cdk/WebToTelegramStack";
+import { App } from "aws-cdk-lib";
+import { WebToTelegramStack } from "./cdk/WebToTelegramStack";
 
-const app = new cdk.App();
+const app = new App();
 
-const getRequiredEnv = (name: string): string => {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Environment variable ${name} is required but not set`);
-  }
-  return value;
+const required = (k: string) => {
+  const v = process.env[k];
+  if (!v) throw new Error(`Missing env: ${k}`);
+  return v;
 };
 
 new WebToTelegramStack(app, "web3-to-telegram", {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || "us-east-1",
+    region: process.env.CDK_DEFAULT_REGION,
   },
-  rpcUrl: getRequiredEnv("RPC_URL"),
-  dataProviderAddress: getRequiredEnv("DATA_PROVIDER_ADDRESS"),
-  alertBotToken: getRequiredEnv("ALERT_BOT_TOKEN"),
-  alertBotChatId: getRequiredEnv("ALERT_BOT_CHAT_ID"),
-  noAlertBotToken: getRequiredEnv("NO_ALERT_BOT_TOKEN"),
-  noAlertBotChatId: getRequiredEnv("NO_ALERT_BOT_CHAT_ID"),
-  watchList: getRequiredEnv("WATCH_LIST"),
-  alertThresholdTokens: getRequiredEnv("ALERT_THRESHOLD_TOKENS"),
+  rpcUrl: required("RPC_URL"),
+  dataProviderAddress: required("DATA_PROVIDER_ADDRESS"),
+  alertBotToken: required("ALERT_BOT_TOKEN"),
+  alertBotChatId: required("ALERT_BOT_CHAT_ID"),
+  noAlertBotToken: required("NO_ALERT_BOT_TOKEN"),
+  noAlertBotChatId: required("NO_ALERT_BOT_CHAT_ID"),
+  watchList: required("WATCH_LIST"),
+  alertThresholdTokens: required("ALERT_THRESHOLD_TOKENS"),
+  watchlistApiKey: required("WATCHLIST_API_KEY"),
+  alarmEmail: required("ALARM_EMAIL"),
 });

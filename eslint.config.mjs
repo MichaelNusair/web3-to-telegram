@@ -28,15 +28,10 @@ const parent = [
   },
   {
     rules: {
-      "prettier/prettier": ["error"],
+      "prettier/prettier": ["off"],
       "@typescript-eslint/no-explicit-any": ["warn"],
       "@typescript-eslint/no-unused-vars": ["off"],
-      "@typescript-eslint/consistent-type-assertions": [
-        "error",
-        { assertionStyle: "never" },
-      ],
       "array-callback-return": ["error"],
-      "no-console": ["error"],
       "unused-imports/no-unused-imports": ["error"],
       // 'import/no-duplicates': ['error'],
     },

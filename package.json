@@ -1,6 +1,10 @@
 {
   "name": "@michaelnusair/web3-to-telegram",
   "version": "1.0.1",
+  "packageManager": "pnpm@9.12.0",
+  "workspaces": [
+    "src/frontend"
+  ],
   "scripts": {
     "build": "rm -rf build && tsc",
     "cdk:list": "cdk list",
@@ -8,7 +12,8 @@
     "watch": "tsc -w",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "cdk:dry-run": "rm -rf build/bundles && cdk synth"
+    "cdk:dry-run": "rm -rf build/bundles && npm --workspace frontend run build && cdk synth",
+    "test": "jest"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -25,7 +30,14 @@
     "globals": "^15.11.0",
     "prettier": "^3.6.2",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.0.0",
+    "@aws-cdk/aws-apigatewayv2-alpha": "2.114.1-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "2.114.1-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "2.114.1-alpha.0",
+    "@swc/jest": "^0.2.36",
+    "jest": "^29.7.0",
+    "@aws-sdk/client-dynamodb": "^3.637.0",
+    "@aws-sdk/lib-dynamodb": "^3.637.0"
   },
   "dependencies": {
     "aws-cdk-lib": "2.147.3",
