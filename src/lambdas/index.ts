@@ -187,22 +187,48 @@ const pendleHuman = (num: number) => {
   return num.toString();
 };
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 const getPendleAvailable = async (): Promise<number> => {
-  const { data } = await axios.get(PENDLE.url, { timeout: 10_000 });
-  const results = (data as any)?.results as any[] | undefined;
-  if (!Array.isArray(results)) throw new Error("Invalid Pendle response");
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    Accept: "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    Origin: "https://app.pendle.finance",
+    Referer: "https://app.pendle.finance/",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+  };
 
-  const mkt = results.find(
-    (r) =>
-      typeof r?.address === "string" &&
-      r.address.toLowerCase() === PENDLE.marketAddress.toLowerCase()
-  );
-  if (!mkt) throw new Error("Pendle market not found");
+  let lastErr: unknown;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const { data } = await axios.get(
+        "https://api-v2.pendle.finance/bff/v2/markets/all?isActive=true",
+        { timeout: 10_000, headers }
+      );
 
-  const current = Number(mkt?.extendedInfo?.syCurrentSupply ?? NaN);
-  if (!Number.isFinite(current)) throw new Error("Invalid syCurrentSupply");
+      const results = (data as any)?.results as any[] | undefined;
+      if (!Array.isArray(results)) throw new Error("Invalid Pendle response");
 
-  return Math.max(0, PENDLE.cap - current);
+      const mkt = results.find(
+        (r) =>
+          typeof r?.address === "string" &&
+          r.address.toLowerCase() === PENDLE_MARKET_ADDRESS.toLowerCase()
+      );
+      if (!mkt) throw new Error("Pendle market not found");
+
+      const current = Number(mkt?.extendedInfo?.syCurrentSupply ?? NaN);
+      if (!Number.isFinite(current)) throw new Error("Invalid syCurrentSupply");
+
+      return Math.max(0, PENDLE_SY_CAP - current); // keep cap hardcoded
+    } catch (e) {
+      lastErr = e;
+      if (i < 2) await sleep(200 * 2 ** i);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 };
 
 const checkPendleAndNotify = async () => {
