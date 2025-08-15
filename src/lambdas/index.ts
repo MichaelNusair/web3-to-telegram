@@ -224,7 +224,7 @@ const checkPendleAndNotify = async () => {
   } catch (e) {
     const msg =
       "Pendle check error: " + (e instanceof Error ? e.message : String(e));
-    await sendTelegram(BOTS.true.token, BOTS.true.chat_id, msg);
+    await sendTelegram(BOTS.false.token, BOTS.false.chat_id, msg);
     return { error: true as const };
   }
 };
