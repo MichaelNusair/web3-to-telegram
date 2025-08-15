@@ -177,7 +177,7 @@ export const handler = async () => {
 const PENDLE = {
   url: "https://api-v2.pendle.finance/bff/v2/markets/all?isActive=true",
   marketAddress: "0xa36b60a14a1a5247912584768c6e53e1a269a9f7",
-  cap: 1_000_000_000,
+  cap: 2_500_000_000,
   threshold: 500_000,
 };
 
@@ -215,14 +215,14 @@ const getPendleAvailable = async (): Promise<number> => {
       const mkt = results.find(
         (r) =>
           typeof r?.address === "string" &&
-          r.address.toLowerCase() === PENDLE_MARKET_ADDRESS.toLowerCase()
+          r.address.toLowerCase() === PENDLE.marketAddress.toLowerCase()
       );
       if (!mkt) throw new Error("Pendle market not found");
 
       const current = Number(mkt?.extendedInfo?.syCurrentSupply ?? NaN);
       if (!Number.isFinite(current)) throw new Error("Invalid syCurrentSupply");
 
-      return Math.max(0, PENDLE_SY_CAP - current); // keep cap hardcoded
+      return Math.max(0, PENDLE.cap - current); // keep cap hardcoded
     } catch (e) {
       lastErr = e;
       if (i < 2) await sleep(200 * 2 ** i);
