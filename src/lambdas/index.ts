@@ -244,6 +244,14 @@ const checkPendleAndNotify = async () => {
         BOTS.true.chat_id,
         `*${title}*\n${text}`
       );
+    } else {
+      const title = "Available sUSDe in Pendle";
+      const text = `It is ${pendleHuman(available)} now`;
+      await sendTelegram(
+        BOTS.false.token,
+        BOTS.false.chat_id,
+        `*${title}*\n${text}`
+      );
     }
 
     return { available, alerted };
