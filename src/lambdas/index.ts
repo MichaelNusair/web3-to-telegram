@@ -189,7 +189,14 @@ const pendleHuman = (num: number) => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const getPendleAvailable = async (): Promise<number> => {
+const pendlePct = (part: number, total: number) =>
+  total === 0 ? "—" : `${((part * 1000) / total / 10).toFixed(1)} %`;
+
+const getPendleData = async (): Promise<{
+  current: number;
+  cap: number;
+  available: number;
+}> => {
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -222,7 +229,8 @@ const getPendleAvailable = async (): Promise<number> => {
       const current = Number(mkt?.extendedInfo?.syCurrentSupply ?? NaN);
       if (!Number.isFinite(current)) throw new Error("Invalid syCurrentSupply");
 
-      return Math.max(0, PENDLE.cap - current); // keep cap hardcoded
+      const available = Math.max(0, PENDLE.cap - current); // keep cap hardcoded
+      return { current, cap: PENDLE.cap, available };
     } catch (e) {
       lastErr = e;
       if (i < 2) await sleep(200 * 2 ** i);
@@ -233,28 +241,26 @@ const getPendleAvailable = async (): Promise<number> => {
 
 const checkPendleAndNotify = async () => {
   try {
-    const available = await getPendleAvailable();
-    const alerted = available > PENDLE.threshold;
+    const { current, cap, available } = await getPendleData();
+    const alert = available > PENDLE.threshold;
+    const bot = alert ? BOTS.true : BOTS.false;
 
-    if (alerted) {
-      const title = "Available sUSDe in Pendle";
-      const text = `It is ${pendleHuman(available)} now`;
-      await sendTelegram(
-        BOTS.true.token,
-        BOTS.true.chat_id,
-        `*${title}*\n${text}`
-      );
-    } else {
-      const title = "Available sUSDe in Pendle";
-      const text = `It is ${pendleHuman(available)} now`;
-      await sendTelegram(
-        BOTS.false.token,
-        BOTS.false.chat_id,
-        `*${title}*\n${text}`
-      );
-    }
+    const msg =
+      `*sUSDe on Pendle*\n` +
+      `• Total supply: *${pendleHuman(current)}*\n` +
+      `• Cap: *${pendleHuman(cap)}*\n` +
+      `• Available: *${pendleHuman(available)}* (${pendlePct(available, cap)} free)\n` +
+      (alert
+        ? "⚠️ *Alert* – ≥ " +
+          pendleHuman(PENDLE.threshold) +
+          " tokens available!"
+        : "✅ No alert – less than " +
+          pendleHuman(PENDLE.threshold) +
+          " available.");
 
-    return { available, alerted };
+    await sendTelegram(bot.token, bot.chat_id, msg);
+
+    return { current, cap, available, alert };
   } catch (e) {
     const msg =
       "Pendle check error: " + (e instanceof Error ? e.message : String(e));
