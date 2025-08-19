@@ -103,7 +103,7 @@ const sendTelegram = async (token: string, chat_id: string, text: string) => {
 
 export const handler = async () => {
   try {
-    const assetsPromise = Promise.all(
+    const results = await Promise.all(
       WATCH_LIST.map(async ({ name, address }) => {
         /* fetch current supply & cap */
         const [current, caps] = await Promise.all([
@@ -133,10 +133,8 @@ export const handler = async () => {
             capWei
           )} free)\n` +
           (alert
-            ? "⚠️ *Alert* – ≥ " + pretty(ALERT_THRESHOLD) + " tokens available!"
-            : "✅ No alert – less than " +
-              pretty(ALERT_THRESHOLD) +
-              " available.");
+            ? "⚠️ *Alert* – ≥ "+pretty(ALERT_THRESHOLD)+" tokens available!"
+            : "✅ No alert – less than "+pretty(ALERT_THRESHOLD)+" available.");
 
         await sendTelegram(bot.token, bot.chat_id, msg);
 
@@ -150,15 +148,7 @@ export const handler = async () => {
       })
     );
 
-    const [assets, pendle] = await Promise.all([
-      assetsPromise,
-      checkPendleAndNotify(),
-    ]);
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ assets, pendle }, null, 2),
-    };
+    return { statusCode: 200, body: JSON.stringify(results, null, 2) };
   } catch (error) {
     console.error("Handler error:", error);
     return {
@@ -169,102 +159,5 @@ export const handler = async () => {
         2
       ),
     };
-  }
-};
-
-/* ─────────── Pendle alert (runs once per invocation) ─────────── */
-
-const PENDLE = {
-  url: "https://api-v2.pendle.finance/bff/v2/markets/all?isActive=true",
-  marketAddress: "0xa36b60a14a1a5247912584768c6e53e1a269a9f7",
-  cap: 2_500_000_000,
-  threshold: 500_000,
-};
-
-const pendleHuman = (num: number) => {
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `${Math.round(num / 1_000)}K`;
-  return num.toString();
-};
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const pendlePct = (part: number, total: number) =>
-  total === 0 ? "—" : `${((part * 1000) / total / 10).toFixed(1)} %`;
-
-const getPendleData = async (): Promise<{
-  current: number;
-  cap: number;
-  available: number;
-}> => {
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    Accept: "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    Origin: "https://app.pendle.finance",
-    Referer: "https://app.pendle.finance/",
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-  };
-
-  let lastErr: unknown;
-  for (let i = 0; i < 3; i++) {
-    try {
-      const { data } = await axios.get(
-        "https://api-v2.pendle.finance/bff/v2/markets/all?isActive=true",
-        { timeout: 10_000, headers }
-      );
-
-      const results = (data as any)?.results as any[] | undefined;
-      if (!Array.isArray(results)) throw new Error("Invalid Pendle response");
-
-      const mkt = results.find(
-        (r) =>
-          typeof r?.address === "string" &&
-          r.address.toLowerCase() === PENDLE.marketAddress.toLowerCase()
-      );
-      if (!mkt) throw new Error("Pendle market not found");
-
-      const current = Number(mkt?.extendedInfo?.syCurrentSupply ?? NaN);
-      if (!Number.isFinite(current)) throw new Error("Invalid syCurrentSupply");
-
-      const available = Math.max(0, PENDLE.cap - current); // keep cap hardcoded
-      return { current, cap: PENDLE.cap, available };
-    } catch (e) {
-      lastErr = e;
-      if (i < 2) await sleep(200 * 2 ** i);
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
-};
-
-const checkPendleAndNotify = async () => {
-  try {
-    const { current, cap, available } = await getPendleData();
-    const alert = available > PENDLE.threshold;
-    const bot = alert ? BOTS.true : BOTS.false;
-
-    const msg =
-      `*sUSDe on Pendle*\n` +
-      `• Total supply: *${pendleHuman(current)}*\n` +
-      `• Cap: *${pendleHuman(cap)}*\n` +
-      `• Available: *${pendleHuman(available)}* (${pendlePct(available, cap)} free)\n` +
-      (alert
-        ? "⚠️ *Alert* – ≥ " +
-          pendleHuman(PENDLE.threshold) +
-          " tokens available!"
-        : "✅ No alert – less than " +
-          pendleHuman(PENDLE.threshold) +
-          " available.");
-
-    await sendTelegram(bot.token, bot.chat_id, msg);
-
-    return { current, cap, available, alert };
-  } catch (e) {
-    const msg =
-      "Pendle check error: " + (e instanceof Error ? e.message : String(e));
-    await sendTelegram(BOTS.false.token, BOTS.false.chat_id, msg);
-    return { error: true as const };
   }
 };
