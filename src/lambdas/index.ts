@@ -43,7 +43,17 @@ const BOTS = {
   },
 };
 
-const WATCH_LIST = parseJsonEnv<WatchedAsset[]>("WATCH_LIST");
+const WATCH_LIST = [
+  {
+    name: "PT USDe September 2025",
+    address: "0xbc6736d346a5ebc0debc997397912cd9b8fae10a",
+  },
+  {
+    name: "PT sUSDe September",
+    address: "0x9f56094c450763769ba0ea9fe2876070c0fd5f77",
+  },
+];
+
 const ALERT_THRESHOLD = ethers.parseUnits(
   getEnvVar("ALERT_THRESHOLD_TOKENS"),
   18
@@ -133,8 +143,10 @@ export const handler = async () => {
             capWei
           )} free)\n` +
           (alert
-            ? "⚠️ *Alert* – ≥ "+pretty(ALERT_THRESHOLD)+" tokens available!"
-            : "✅ No alert – less than "+pretty(ALERT_THRESHOLD)+" available.");
+            ? "⚠️ *Alert* – ≥ " + pretty(ALERT_THRESHOLD) + " tokens available!"
+            : "✅ No alert – less than " +
+              pretty(ALERT_THRESHOLD) +
+              " available.");
 
         await sendTelegram(bot.token, bot.chat_id, msg);
 
