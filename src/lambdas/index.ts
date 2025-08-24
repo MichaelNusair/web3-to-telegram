@@ -54,10 +54,7 @@ const WATCH_LIST = [
   },
 ];
 
-const ALERT_THRESHOLD = ethers.parseUnits(
-  getEnvVar("ALERT_THRESHOLD_TOKENS"),
-  18
-);
+const ALERT_THRESHOLD = ethers.parseUnits("50000", 18);
 
 /* ─────────── Chain interfaces ────────── */
 
