@@ -45,12 +45,8 @@ const BOTS = {
 
 const WATCH_LIST = [
   {
-    name: "PT USDe September 2025",
-    address: "0xbc6736d346a5ebc0debc997397912cd9b8fae10a",
-  },
-  {
-    name: "PT sUSDe September",
-    address: "0x9f56094c450763769ba0ea9fe2876070c0fd5f77",
+    name: "New Pool - PT USDe November 2025",
+    address: "0x62c6e813b9589c3631ba0cdb013acdb8544038b7",
   },
 ];
 
