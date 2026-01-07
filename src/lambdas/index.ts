@@ -54,10 +54,13 @@ const ALERT_THRESHOLD = ethers.parseUnits(
 
 const ABI = [
   "function getReserveData(address asset) view returns (uint256 unbacked, uint256 accruedToTreasuryScaled, uint256 totalAToken, uint256 totalStableDebt, uint256 totalVariableDebt, uint256 liquidityRate, uint256 variableBorrowRate, uint256 stableBorrowRate, uint256 averageStableBorrowRate, uint256 liquidityIndex, uint256 variableBorrowIndex, uint40 lastUpdateTimestamp)",
+  "function getReserveCaps(address asset) view returns (uint256 borrowCap, uint256 supplyCap)",
 ];
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const dp = new ethers.Contract(DATA_PROVIDER, ABI, provider);
+
+const UNIT = 10n ** 18n;
 
 /* ──────────── Helpers ─────────────── */
 
@@ -103,46 +106,61 @@ export const handler = async () => {
   try {
     const results = await Promise.all(
       WATCH_LIST.map(async ({ name, address }) => {
-        /* fetch reserve data from PoolDataProvider */
-        const reserveData = await dp.getReserveData(address);
+        /* fetch reserve data and caps from PoolDataProvider */
+        const [reserveData, caps] = await Promise.all([
+          dp.getReserveData(address),
+          dp.getReserveCaps(address),
+        ]);
 
-        const totalAToken = reserveData[2] as bigint; // total supplied
+        const totalAToken = reserveData[2] as bigint; // total supplied (in wei)
         const totalStableDebt = reserveData[3] as bigint;
         const totalVariableDebt = reserveData[4] as bigint;
 
+        const rawSupplyCap = caps[1] as bigint; // supply cap in whole tokens
+        const supplyCapWei = rawSupplyCap * UNIT; // convert to wei
+
         /* calculate available liquidity (what can be borrowed) */
         const totalBorrowed = totalStableDebt + totalVariableDebt;
-        const availableToBorrow =
+        const liquidityAvailable =
           totalAToken > totalBorrowed ? totalAToken - totalBorrowed : 0n;
 
-        /* alert logic */
-        const alert = availableToBorrow >= ALERT_THRESHOLD;
+        /* calculate supply cap availability (room to supply more) */
+        const supplyCapAvailable =
+          rawSupplyCap === 0n
+            ? 0n // no cap = treat as 0 available (or could be unlimited)
+            : supplyCapWei > totalAToken
+              ? supplyCapWei - totalAToken
+              : 0n;
+
+        /* alert logic - alert when there's room in the supply cap */
+        const alert = supplyCapAvailable >= ALERT_THRESHOLD;
         const bot = alert ? BOTS.true : BOTS.false;
 
         /* message */
         const msg =
           `*${name}*\n` +
-          `• Total supplied: *${pretty(totalAToken)}*\n` +
-          `• Total borrowed: *${pretty(totalBorrowed)}*\n` +
-          `• Available to borrow: *${pretty(availableToBorrow)}* (${pct(
-            availableToBorrow,
-            totalAToken
-          )} of supply)\n` +
+          `• Supply: *${pretty(totalAToken)}* of *${pretty(supplyCapWei)}* cap\n` +
+          `• Available to supply: *${pretty(supplyCapAvailable)}* (${pct(
+            supplyCapAvailable,
+            supplyCapWei
+          )} free)\n` +
+          `• Liquidity in pool: *${pretty(liquidityAvailable)}*\n` +
           (alert
-            ? "⚠️ *Alert* – ≥ " +
+            ? "🚨 *Alert* – ≥ " +
               pretty(ALERT_THRESHOLD) +
-              " available to borrow!"
-            : "✅ No alert – less than " +
+              " supply cap available!"
+            : "✅ Cap full – less than " +
               pretty(ALERT_THRESHOLD) +
-              " available to borrow.");
+              " available.");
 
         await sendTelegram(bot.token, bot.chat_id, msg);
 
         return {
           name,
           totalSupplied: totalAToken.toString(),
-          totalBorrowed: totalBorrowed.toString(),
-          availableToBorrow: availableToBorrow.toString(),
+          supplyCap: supplyCapWei.toString(),
+          supplyCapAvailable: supplyCapAvailable.toString(),
+          liquidityAvailable: liquidityAvailable.toString(),
           alert,
         };
       })
