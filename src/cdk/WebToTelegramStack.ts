@@ -58,7 +58,7 @@ export class WebToTelegramStack extends Stack {
     const scheduleRule = new Rule(this, "WebToTelegramScheduleRule", {
       ruleName: "WebToTelegramEveryMinute",
       description: "Triggers Web3 to Telegram monitoring every minute",
-      schedule: Schedule.rate(Duration.days(1000)),
+      schedule: Schedule.rate(Duration.minute(1)),
     });
 
     // Add Lambda as target for the EventBridge rule
