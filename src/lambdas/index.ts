@@ -43,26 +43,21 @@ const BOTS = {
   },
 };
 
-const WATCH_LIST = [
-  {
-    name: "New Pool - PT USDe November 2025",
-    address: "0x62c6e813b9589c3631ba0cdb013acdb8544038b7",
-  },
-];
+const WATCH_LIST = parseJsonEnv<WatchedAsset[]>("WATCH_LIST");
 
-const ALERT_THRESHOLD = ethers.parseUnits("100000", 18);
+const ALERT_THRESHOLD = ethers.parseUnits(
+  getEnvVar("ALERT_THRESHOLD_TOKENS"),
+  18
+);
 
 /* ─────────── Chain interfaces ────────── */
 
 const ABI = [
-  "function getATokenTotalSupply(address) view returns (uint256)",
-  "function getReserveCaps(address) view returns (uint256 borrowCap, uint256 supplyCap)",
+  "function getReserveData(address asset) view returns (uint256 unbacked, uint256 accruedToTreasuryScaled, uint256 totalAToken, uint256 totalStableDebt, uint256 totalVariableDebt, uint256 liquidityRate, uint256 variableBorrowRate, uint256 stableBorrowRate, uint256 averageStableBorrowRate, uint256 liquidityIndex, uint256 variableBorrowIndex, uint40 lastUpdateTimestamp)",
 ];
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const dp = new ethers.Contract(DATA_PROVIDER, ABI, provider);
-
-const UNIT = 10n ** 18n;
 
 /* ──────────── Helpers ─────────────── */
 
@@ -75,7 +70,7 @@ const pretty = (wei: bigint) => {
   return num.toFixed(0);
 };
 
-/** percentage with one decimal, or "—" if cap = 0 */
+/** percentage with one decimal, or "—" if total = 0 */
 const pct = (part: bigint, total: bigint) =>
   total === 0n ? "—" : `${(Number((part * 1000n) / total) / 10).toFixed(1)} %`;
 
@@ -108,46 +103,46 @@ export const handler = async () => {
   try {
     const results = await Promise.all(
       WATCH_LIST.map(async ({ name, address }) => {
-        /* fetch current supply & cap */
-        const [current, caps] = await Promise.all([
-          dp.getATokenTotalSupply(address),
-          dp.getReserveCaps(address),
-        ]);
-        const rawSupplyCap = caps[1]; // whole tokens
-        const capWei = rawSupplyCap * UNIT; // convert to wei
+        /* fetch reserve data from PoolDataProvider */
+        const reserveData = await dp.getReserveData(address);
 
-        /* calculate free capacity */
-        const available =
-          rawSupplyCap === 0n ? 0n : capWei > current ? capWei - current : 0n;
+        const totalAToken = reserveData[2] as bigint; // total supplied
+        const totalStableDebt = reserveData[3] as bigint;
+        const totalVariableDebt = reserveData[4] as bigint;
+
+        /* calculate available liquidity (what can be borrowed) */
+        const totalBorrowed = totalStableDebt + totalVariableDebt;
+        const availableToBorrow =
+          totalAToken > totalBorrowed ? totalAToken - totalBorrowed : 0n;
 
         /* alert logic */
-        const alert = available >= ALERT_THRESHOLD;
+        const alert = availableToBorrow >= ALERT_THRESHOLD;
         const bot = alert ? BOTS.true : BOTS.false;
 
         /* message */
         const msg =
           `*${name}*\n` +
-          `• Total supply: *${pretty(current)}*\n` +
-          (rawSupplyCap === 0n
-            ? "• Cap: ∞\n"
-            : `• Cap: *${pretty(capWei)}*\n`) +
-          `• Available: *${pretty(available)}* (${pct(
-            available,
-            capWei
-          )} free)\n` +
+          `• Total supplied: *${pretty(totalAToken)}*\n` +
+          `• Total borrowed: *${pretty(totalBorrowed)}*\n` +
+          `• Available to borrow: *${pretty(availableToBorrow)}* (${pct(
+            availableToBorrow,
+            totalAToken
+          )} of supply)\n` +
           (alert
-            ? "⚠️ *Alert* – ≥ " + pretty(ALERT_THRESHOLD) + " tokens available!"
+            ? "⚠️ *Alert* – ≥ " +
+              pretty(ALERT_THRESHOLD) +
+              " available to borrow!"
             : "✅ No alert – less than " +
               pretty(ALERT_THRESHOLD) +
-              " available.");
+              " available to borrow.");
 
         await sendTelegram(bot.token, bot.chat_id, msg);
 
         return {
           name,
-          current: current.toString(),
-          supplyCap: capWei.toString(),
-          available: available.toString(),
+          totalSupplied: totalAToken.toString(),
+          totalBorrowed: totalBorrowed.toString(),
+          availableToBorrow: availableToBorrow.toString(),
           alert,
         };
       })
