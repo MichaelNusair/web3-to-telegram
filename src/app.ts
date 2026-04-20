@@ -25,4 +25,8 @@ new WebToTelegramStack(app, "web3-to-telegram", {
   noAlertBotChatId: getRequiredEnv("NO_ALERT_BOT_CHAT_ID"),
   watchList: getRequiredEnv("WATCH_LIST"),
   alertThresholdTokens: getRequiredEnv("ALERT_THRESHOLD_TOKENS"),
+  liquidityWatchList: getRequiredEnv("LIQUIDITY_WATCH_LIST"),
+  liquidityAlertThresholdTokens: getRequiredEnv(
+    "LIQUIDITY_ALERT_THRESHOLD_TOKENS"
+  ),
 });
